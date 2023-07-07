@@ -26,6 +26,10 @@ jobs:
           RWX_ACCESS_TOKEN_STAGING: ${{ secrets.RWX_ACCESS_TOKEN_STAGING }} # used from within the tests against staging
           DEBUG: ${{ secrets.ACTIONS_STEP_DEBUG }}
           REPORT: true
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: junit.xml
 
   unstable-release:
     if: ${{ github.ref == 'refs/heads/main' }}

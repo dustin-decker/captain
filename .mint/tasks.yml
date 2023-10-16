@@ -1,0 +1,68 @@
+github:
+  on:
+    push:
+      init:
+        gh-sha: ${{ event.github.push.head_commit.id }}
+        branch: ${{ event.github.push.ref }}
+        commit-message: ${{ event.github.push.head_commit.message }}
+        commit-sha: ${{ event.github.push.head_commit.id }}
+        username: ${{ event.github.push.pusher.name }}
+
+tasks:
+  - key: hello-mint
+    run: echo "Hello there, Mint!"
+  - key: git-clone-with-dot-git
+    uses: mint/checkout
+    from: []
+    with:
+      repository: git@github.com:rwx-research/captain.git
+      sha: ${{ init.gh-sha }}
+      token: ''
+      ssh-key: ${{ secrets.CHECKOUT_SSH_KEY_CAPTAIN_REPO }}
+  - key: setup-nix
+    from: [git-clone-with-dot-git]
+    run: |
+      sh <(curl -L https://nixos.org/nix/install) --no-daemon
+      mkdir -p /home/ubuntu/.config/nix
+      echo "experimental-features = nix-command flakes" >> /home/ubuntu/.config/nix/nix.conf
+    inputs:
+      files:
+        - flake.nix
+        - flake.lock
+  - key: lint-flake-nix
+    from: [setup-nix]
+    run: |
+      . /home/ubuntu/.nix-profile/etc/profile.d/nix.sh
+      nix fmt -- --check flake.nix
+  - key: build-captain
+    run: |
+      CGO_ENABLED=0 \
+        LDFLAGS="-w -s -X github.com/rwx-research/captain-cli.Version=testing-$(git rev-parse HEAD)" \
+        nix develop --command mage
+  - key: run_tests
+    run: |
+      CGO_ENABLED=0 \
+        LDFLAGS="-X github.com/rwx-research/captain-cli.Version=testing-$(git rev-parse HEAD)" \
+        ./captain run captain-cli-ginkgo
+    env:
+      RWX_ACCESS_TOKEN: ${{ secrets.RWX_ACCESS_TOKEN }}
+      RWX_ACCESS_TOKEN_STAGING: ${{ secrets.RWX_ACCESS_TOKEN_STAGING }}
+      REPORT: true
+      CAPTAIN_BRANCH:
+        value: ${{ init.branch }}
+        cache: false
+      CAPTAIN_BUILD_URL:
+        value: https://mint.rwx.com/rwx/runs/${{ mint.run.id }}
+        cache: false
+      CAPTAIN_COMMIT_MESSAGE:
+        value: ${{ init.commit-message }}
+        cache: false
+      CAPTAIN_SHA:
+        value: ${{ init.commit-sha }}
+        cache: false
+      CAPTAIN_TITLE:
+        value: ${{ init.commit-message }}
+        cache: false
+      CAPTAIN_WHO:
+        value: ${{ init.username }}
+        cache: false

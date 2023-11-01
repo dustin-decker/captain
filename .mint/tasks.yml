@@ -18,7 +18,7 @@ tasks:
       repository: git@github.com:rwx-research/captain.git
       sha: ${{ init.gh-sha }}
       token: ''
-      ssh-key: ${{ secrets.CHECKOUT_SSH_KEY_CAPTAIN_REPO }}
+      ssh-key: ${{ vaults.default.secrets.CHECKOUT_SSH_KEY_CAPTAIN_REPO }}
   - key: setup-nix
     from: [git-clone-with-dot-git]
     run: |
@@ -45,8 +45,8 @@ tasks:
         LDFLAGS="-X github.com/rwx-research/captain-cli.Version=testing-$(git rev-parse HEAD)" \
         ./captain run captain-cli-ginkgo
     env:
-      RWX_ACCESS_TOKEN: ${{ secrets.RWX_ACCESS_TOKEN }}
-      RWX_ACCESS_TOKEN_STAGING: ${{ secrets.RWX_ACCESS_TOKEN_STAGING }}
+      RWX_ACCESS_TOKEN: ${{ vaults.default.secrets.RWX_ACCESS_TOKEN }}
+      RWX_ACCESS_TOKEN_STAGING: ${{ vaults.default.secrets.RWX_ACCESS_TOKEN_STAGING }}
       REPORT: true
       CAPTAIN_BRANCH:
         value: ${{ init.branch }}
